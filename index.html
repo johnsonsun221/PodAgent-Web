@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PodAgent — AI 幫你聽完</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #1a1a1a;
+      --border: #2a2a2a;
+      --accent: #ccff00;
+      --accent-dim: rgba(204,255,0,0.12);
+      --text: #ffffff;
+      --muted: #888;
+      --purple: #9b9bff;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    /* ── Layout ── */
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 680px;
+      padding: 48px 24px 80px;
+      flex-direction: column;
+      animation: fadeIn .25s ease;
+    }
+    .screen.active { display: flex; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+
+    /* ── Header ── */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 40px;
+    }
+    .logo-icon { font-size: 20px; }
+
+    /* ── Home ── */
+    .hero-title {
+      font-size: clamp(36px, 8vw, 56px);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .hero-title .highlight { color: var(--accent); }
+
+    .hero-sub {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 48px;
+    }
+
+    .input-group {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .input-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    .input-icon { font-size: 20px; flex-shrink: 0; }
+    input[type="text"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 14px;
+    }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    /* ── History ── */
+    .history-section { margin-bottom: 24px; }
+
+    .history-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .history-item:hover { border-color: var(--accent); }
+
+    .history-item-info { flex: 1; min-width: 0; }
+    .history-item-title {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-item-url {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: monospace;
+      margin-top: 2px;
+    }
+
+    .history-delete {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 2px 4px;
+      flex-shrink: 0;
+      line-height: 1;
+      transition: color .15s;
+    }
+    .history-delete:hover { color: #ff5555; }
+
+    /* API URL setting */
+    .api-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .api-row label { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+    .api-row input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 12px;
+      outline: none;
+    }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width: 100%;
+      padding: 18px;
+      background: var(--accent);
+      color: #000;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn-primary:hover { opacity: .9; }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Back button ── */
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 24px;
+      align-self: flex-start;
+      line-height: 1;
+    }
+
+    /* ── Episode List ── */
+    .podcast-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    .podcast-icon {
+      width: 56px;
+      height: 56px;
+      background: #2a2a4a;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+    .podcast-title {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .episode-count {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .episode-count span { color: var(--accent); }
+
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    .episode-list { display: flex; flex-direction: column; gap: 0; }
+
+    .episode-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .15s;
+      border-radius: 8px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+    .episode-item:hover { background: var(--surface); }
+    .episode-item:last-child { border-bottom: none; }
+
+    .ep-num {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+      width: 26px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .ep-info { flex: 1; min-width: 0; }
+    .ep-title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+    .ep-date { font-size: 12px; color: var(--purple); font-family: monospace; }
+    .ep-arrow { color: var(--muted); font-size: 16px; flex-shrink: 0; }
+
+    .transcript-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      color: #000;
+      background: var(--accent);
+      border-radius: 4px;
+      padding: 2px 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Processing ── */
+    #screen-processing {
+      justify-content: center;
+      min-height: 100vh;
+      padding-top: 0;
+      padding-bottom: 0;
+      gap: 0;
+    }
+
+    .proc-icon {
+      font-size: 40px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .proc-title {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .proc-current-step {
+      font-size: 14px;
+      color: var(--accent);
+      text-align: center;
+      margin-bottom: 20px;
+      min-height: 20px;
+      font-family: monospace;
+      letter-spacing: .5px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      background: var(--surface);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width .6s ease;
+      width: 0%;
+    }
+
+    .progress-pct {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: right;
+      margin-bottom: 32px;
+      font-family: monospace;
+    }
+
+    .step-checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      width: 100%;
+    }
+
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .step-row:last-child { border-bottom: none; }
+
+    .step-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+      transition: all .3s;
+    }
+    .step-dot.done   { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700; }
+    .step-dot.active { border-color: var(--accent); animation: dotPulse 1s ease-in-out infinite; }
+    @keyframes dotPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(204,255,0,.5); }
+      50%      { box-shadow: 0 0 0 5px rgba(204,255,0,0); }
+    }
+
+    .step-name { color: var(--muted); transition: color .3s; }
+    .step-row.active .step-name  { color: var(--text); font-weight: 600; }
+    .step-row.done   .step-name  { color: var(--muted); }
+
+    .btn-cancel {
+      margin-top: 32px;
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-cancel:hover { color: #ff5555; border-color: #ff5555; }
+
+    /* ── Summary ── */
+    .summary-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .summary-header h1 { font-size: 22px; font-weight: 700; }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--accent);
+      opacity: .3;
+    }
+
+    .summary-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      font-size: 15px;
+      line-height: 1.75;
+      color: #ddd;
+      margin-bottom: 36px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .keypoints { display: flex; flex-direction: column; gap: 12px; margin-bottom: 36px; }
+
+    .keypoint-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .kp-num {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+      width: 24px;
+      padding-top: 1px;
+    }
+    .kp-text { font-size: 14px; line-height: 1.6; color: #ddd; }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 16px;
+      background: transparent;
+      color: var(--accent);
+      font-size: 15px;
+      font-weight: 600;
+      border: 1.5px solid var(--accent);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-secondary:hover { background: var(--accent-dim); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #ff4444;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: transform .3s ease;
+      z-index: 999;
+      white-space: nowrap;
+      max-width: calc(100vw - 48px);
+      text-align: center;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ════════ HOME ════════ -->
+  <section id="screen-home" class="screen active">
+    <div class="logo">
+      <span class="logo-icon">🎙️</span>
+      PODAGENT
+    </div>
+
+    <h1 class="hero-title">
+      丟 RSS，<br>
+      AI 幫你<span class="highlight">聽完</span>
+    </h1>
+    <p class="hero-sub">
+      貼上 Podcast RSS 連結<br>
+      AI 自動整理摘要與重點
+    </p>
+
+    <div class="input-group">
+      <div class="input-label">Podcast RSS URL</div>
+      <div class="input-row">
+        <span class="input-icon">📡</span>
+        <input id="rss-input" type="text"
+          placeholder="貼上 RSS URL 或 YouTube 影片網址..." />
+      </div>
+    </div>
+
+    <div id="history-section" class="history-section" style="display:none">
+      <div class="history-label">最近搜尋</div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+
+    <div class="api-row">
+      <label>API:</label>
+      <input id="api-url" type="text" value="http://localhost:8000" />
+    </div>
+
+    <button class="btn-primary" id="btn-get-episodes">取得節目列表</button>
+  </section>
+
+  <!-- ════════ EPISODE LIST ════════ -->
+  <section id="screen-episodes" class="screen">
+    <button class="back-btn" id="back-from-episodes">←</button>
+
+    <div class="podcast-header">
+      <div class="podcast-icon">🎙️</div>
+      <div>
+        <div class="podcast-title" id="podcast-title">—</div>
+        <div class="episode-count">共 <span id="episode-count">0</span> 集 · 點選開始分析</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="episode-list" id="episode-list"></div>
+  </section>
+
+  <!-- ════════ PROCESSING ════════ -->
+  <section id="screen-processing" class="screen">
+    <div class="proc-icon">🎙️</div>
+    <div class="proc-title">AI 分析中</div>
+    <div class="proc-current-step" id="proc-current-step">初始化...</div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="progress-pct" id="progress-pct">0%</div>
+
+    <div class="step-checklist">
+      <div class="step-row" id="srow-download">
+        <div class="step-dot" id="sdot-download"></div>
+        <span class="step-name" id="sname-download">下載音訊</span>
+      </div>
+      <div class="step-row" id="srow-whisper">
+        <div class="step-dot" id="sdot-whisper"></div>
+        <span class="step-name" id="sname-whisper">語音轉文字</span>
+        <span id="whisper-skip-badge" style="display:none;font-size:10px;color:var(--muted);margin-left:auto;font-family:monospace;">已跳過</span>
+      </div>
+      <div class="step-row" id="srow-ai">
+        <div class="step-dot" id="sdot-ai"></div>
+        <span class="step-name">AI 生成摘要</span>
+      </div>
+    </div>
+
+    <button class="btn-cancel" id="btn-cancel-analysis">終止分析</button>
+  </section>
+
+  <!-- ════════ SUMMARY ════════ -->
+  <section id="screen-summary" class="screen">
+    <div class="summary-header">
+      <button class="back-btn" id="back-from-summary" style="margin:0">←</button>
+      <h1>摘要重點</h1>
+    </div>
+
+    <div class="section-label">摘要</div>
+    <div class="summary-box" id="summary-text">—</div>
+
+    <div class="section-label">重點整理</div>
+    <div class="keypoints" id="keypoints-list"></div>
+
+    <button class="btn-secondary" id="btn-analyze-another">分析另一集</button>
+  </section>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const API_BASE = () => document.getElementById('api-url').value.replace(/\/$/, '');
+
+  // ── History (localStorage) ──
+  const HISTORY_KEY = 'podagent_history';
+  const MAX_HISTORY = 10;
+
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function saveToHistory(title, url) {
+    let history = loadHistory();
+    history = history.filter(h => h.url !== url);          // 去重
+    history.unshift({ title, url });                        // 最新的放最前
+    if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    renderHistory();
+  }
+
+  function deleteFromHistory(url) {
+    const history = loadHistory().filter(h => h.url !== url);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const history = loadHistory();
+    const section = document.getElementById('history-section');
+    const list = document.getElementById('history-list');
+
+    if (history.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = '';
+
+    history.forEach(({ title, url }) => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = `
+        <div class="history-item-info">
+          <div class="history-item-title">${escHtml(title)}</div>
+          <div class="history-item-url">${escHtml(url)}</div>
+        </div>
+        <button class="history-delete" title="刪除">×</button>
+      `;
+      item.querySelector('.history-item-info').addEventListener('click', () => {
+        document.getElementById('rss-input').value = url;
+        document.getElementById('btn-get-episodes').click();
+      });
+      item.querySelector('.history-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteFromHistory(url);
+      });
+      list.appendChild(item);
+    });
+  }
+
+  renderHistory();
+
+  // ── YouTube URL 偵測 ──
+  function isYouTubeUrl(url) {
+    return /^https?:\/\/(www\.)?(youtube\.com\/watch|youtu\.be\/)/.test(url.trim());
+  }
+
+  // ── Screen navigation ──
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── Toast ──
+  let toastTimer;
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+  }
+
+  // ── Progress UI ──
+  const PHASE_MAP = {
+    '取得 YouTube 字幕': 'download',
+    '下載音訊中':        'download',
+    '下載字幕':          'download',
+    '語音轉文字':        'whisper',
+    'AI 生成摘要':       'ai',
+    '完成':              'ai',
+  };
+
+  function resetProgress() {
+    document.getElementById('progress-fill').style.width = '0%';
+    document.getElementById('progress-pct').textContent = '0%';
+    document.getElementById('proc-current-step').textContent = '初始化...';
+    document.getElementById('sname-download').textContent = '下載音訊';
+    document.getElementById('sname-whisper').textContent = '語音轉文字';
+    document.getElementById('whisper-skip-badge').style.display = 'none';
+    ['download','whisper','ai'].forEach(k => {
+      const dot = document.getElementById(`sdot-${k}`);
+      const row = document.getElementById(`srow-${k}`);
+      dot.className = 'step-dot';
+      dot.textContent = '';
+      row.className = 'step-row';
+    });
+  }
+
+  function updateProgress({ step, progress }) {
+    document.getElementById('progress-fill').style.width = progress + '%';
+    document.getElementById('progress-pct').textContent = progress + '%';
+    document.getElementById('proc-current-step').textContent = step;
+
+    if (step === '下載字幕') {
+      document.getElementById('sname-download').textContent = '下載字幕';
+      // 字幕模式：標記語音轉文字為已跳過
+      document.getElementById('sname-whisper').textContent = '語音轉文字';
+      document.getElementById('whisper-skip-badge').style.display = 'inline';
+      const dot = document.getElementById('sdot-whisper');
+      const row = document.getElementById('srow-whisper');
+      dot.className = 'step-dot';
+      dot.textContent = '—';
+      dot.style.color = 'var(--muted)';
+      row.className = 'step-row';
+    }
+
+    if (step.startsWith('語音轉文字')) {
+      document.getElementById('sname-whisper').textContent = step;
+    }
+
+    const phaseOrder = ['download','whisper','ai'];
+    const activeKey = Object.entries(PHASE_MAP).find(([k]) => step.startsWith(k))?.[1];
+
+    phaseOrder.forEach(k => {
+      const dot = document.getElementById(`sdot-${k}`);
+      const row = document.getElementById(`srow-${k}`);
+      const idx = phaseOrder.indexOf(k);
+      const activeIdx = phaseOrder.indexOf(activeKey);
+
+      if (idx < activeIdx) {
+        dot.className = 'step-dot done'; dot.textContent = '✓'; row.className = 'step-row done';
+      } else if (k === activeKey) {
+        dot.className = 'step-dot active'; dot.textContent = ''; row.className = 'step-row active';
+      } else {
+        dot.className = 'step-dot'; dot.textContent = ''; row.className = 'step-row';
+      }
+    });
+  }
+
+  // ── State ──
+  let currentEpisodes = [];
+  let currentPodcastTitle = '';
+  let activeSource = null;
+
+  // ── Get Episodes ──
+  document.getElementById('btn-get-episodes').addEventListener('click', async () => {
+    const input = document.getElementById('rss-input').value.trim();
+    if (!input) { showToast('請先輸入 RSS 或 YouTube 網址'); return; }
+
+    const btn = document.getElementById('btn-get-episodes');
+    btn.disabled = true;
+    btn.textContent = '載入中...';
+
+    try {
+      if (isYouTubeUrl(input)) {
+        // ── YouTube 流程 ──
+        const res = await fetch(`${API_BASE()}/youtube/info?url=${encodeURIComponent(input)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const info = await res.json();
+
+        saveToHistory(`▶ ${info.title}`, input);
+        document.getElementById('podcast-title').textContent = info.title;
+        document.getElementById('episode-count').textContent = `${info.uploader} · 點選開始分析`;
+
+        const list = document.getElementById('episode-list');
+        list.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'episode-item';
+        item.innerHTML = `
+          <span class="ep-num">▶</span>
+          <div class="ep-info">
+            <div class="ep-title">${escHtml(info.title)}</div>
+            <div class="ep-date">${info.uploader}${info.duration ? ' · ' + fmtDuration(info.duration) : ''}</div>
+          </div>
+          <span class="transcript-badge">YT</span>
+          <span class="ep-arrow">›</span>
+        `;
+        item.addEventListener('click', () => analyzeEpisode(null, null, null, input));
+        list.appendChild(item);
+        showScreen('screen-episodes');
+
+      } else {
+        // ── RSS 流程 ──
+        const res = await fetch(`${API_BASE()}/podcast?rss_url=${encodeURIComponent(input)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        currentPodcastTitle = data.podcast_title;
+        currentEpisodes = data.episodes;
+
+        saveToHistory(data.podcast_title, input);
+        document.getElementById('podcast-title').textContent = data.podcast_title;
+        document.getElementById('episode-count').textContent = `共 ${data.episodes.length} 集 · 點選開始分析`;
+
+        const list = document.getElementById('episode-list');
+        list.innerHTML = '';
+        data.episodes.forEach((ep, i) => {
+          const item = document.createElement('div');
+          item.className = 'episode-item';
+          const badge = ep.transcript_url ? `<span class="transcript-badge">字幕</span>` : '';
+          item.innerHTML = `
+            <span class="ep-num">${String(i + 1).padStart(2, '0')}</span>
+            <div class="ep-info">
+              <div class="ep-title">${escHtml(ep.title)}</div>
+              <div class="ep-date">${ep.publish_time || '—'}</div>
+            </div>
+            ${badge}
+            <span class="ep-arrow">›</span>
+          `;
+          item.addEventListener('click', () => analyzeEpisode(ep.mp3_url, ep.transcript_url, ep.transcript_type, null));
+          list.appendChild(item);
+        });
+        showScreen('screen-episodes');
+      }
+    } catch (e) {
+      showToast('取得失敗：' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '取得節目列表';
+    }
+  });
+
+  function fmtDuration(sec) {
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  // ── Analyze Episode via SSE ──
+  function analyzeEpisode(mp3Url, transcriptUrl, transcriptType, youtubeUrl) {
+    if (activeSource) { activeSource.close(); activeSource = null; }
+    resetProgress();
+    showScreen('screen-processing');
+
+    let url;
+    if (youtubeUrl) {
+      url = `${API_BASE()}/analyze/stream?youtube_url=${encodeURIComponent(youtubeUrl)}`;
+    } else {
+      url = `${API_BASE()}/analyze/stream?mp3_url=${encodeURIComponent(mp3Url)}`;
+      if (transcriptUrl) {
+        url += `&transcript_url=${encodeURIComponent(transcriptUrl)}`;
+        if (transcriptType) url += `&transcript_type=${encodeURIComponent(transcriptType)}`;
+      }
+    }
+    const es = new EventSource(url);
+    activeSource = es;
+    let completed = false;
+
+    es.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+
+      if (data.step === 'error') {
+        completed = true;
+        es.close(); activeSource = null;
+        showToast('分析失敗：' + data.error);
+        showScreen('screen-episodes');
+        return;
+      }
+
+      updateProgress(data);
+
+      if (data.progress === 100) {
+        completed = true;
+        es.close(); activeSource = null;
+        renderSummary(data.result);
+        showScreen('screen-summary');
+      }
+    };
+
+    es.onerror = () => {
+      if (completed) return;
+      es.close(); activeSource = null;
+      showToast('連線中斷，請重試');
+      showScreen('screen-episodes');
+    };
+  }
+
+  // ── Render Summary ──
+  function renderSummary(data) {
+    document.getElementById('summary-text').textContent = data.answer || '（無摘要）';
+
+    const kpList = document.getElementById('keypoints-list');
+    kpList.innerHTML = '';
+    (data.key_points || []).forEach((kp, i) => {
+      const item = document.createElement('div');
+      item.className = 'keypoint-item';
+      item.innerHTML = `
+        <span class="kp-num">${String(i + 1).padStart(2, '0')}</span>
+        <span class="kp-text">${escHtml(kp)}</span>
+      `;
+      kpList.appendChild(item);
+    });
+  }
+
+  // ── Cancel analysis ──
+  document.getElementById('btn-cancel-analysis').addEventListener('click', () => {
+    if (activeSource) { activeSource.close(); activeSource = null; }
+    showScreen('screen-episodes');
+  });
+
+  // ── Navigation ──
+  document.getElementById('back-from-episodes').addEventListener('click', () => showScreen('screen-home'));
+  document.getElementById('back-from-summary').addEventListener('click', () => showScreen('screen-episodes'));
+  document.getElementById('btn-analyze-another').addEventListener('click', () => showScreen('screen-episodes'));
+
+  // ── Enter key on RSS input ──
+  document.getElementById('rss-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-get-episodes').click();
+  });
+
+  // ── Utils ──
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
