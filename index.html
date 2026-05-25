@@ -549,6 +549,23 @@
     .search-result-excerpt { font-size: 13px; color: var(--muted); line-height: 1.6; }
     .no-results { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
 
+    /* ── Analyzed badge ── */
+    .analyzed-badge {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 700;
+      padding: 2px 6px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .episode-item.analyzed {
+      border-left: 3px solid var(--accent);
+      padding-left: 6px;
+      background: rgba(204,255,0,0.04);
+    }
+
     /* ── Search link on home ── */
     .search-all-link {
       display: block;
@@ -795,10 +812,27 @@
     return /^https?:\/\/(www\.)?(youtube\.com\/watch|youtu\.be\/)/.test(url.trim());
   }
 
+  // ── Analyzed badges ──
+  function updateAnalyzedBadges() {
+    document.querySelectorAll('.episode-item[data-episode-url]').forEach(item => {
+      const url = item.dataset.episodeUrl;
+      if (!url || !getCachedResult(url)) return;
+      item.classList.add('analyzed');
+      if (!item.querySelector('.analyzed-badge')) {
+        const badge = document.createElement('span');
+        badge.className = 'analyzed-badge';
+        badge.textContent = '✓ 已分析';
+        const arrow = item.querySelector('.ep-arrow');
+        arrow ? item.insertBefore(badge, arrow) : item.appendChild(badge);
+      }
+    });
+  }
+
   // ── Screen navigation ──
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+    if (id === 'screen-episodes') updateAnalyzedBadges();
   }
 
   // ── Toast ──
@@ -917,8 +951,10 @@
           <span class="transcript-badge">YT</span>
           <span class="ep-arrow">›</span>
         `;
+        item.dataset.episodeUrl = input;
         item.addEventListener('click', () => analyzeEpisode(null, null, null, input, info.title, info.uploader));
         list.appendChild(item);
+        updateAnalyzedBadges();
         showScreen('screen-episodes');
 
       } else {
@@ -949,9 +985,11 @@
             ${badge}
             <span class="ep-arrow">›</span>
           `;
+          item.dataset.episodeUrl = ep.mp3_url || '';
           item.addEventListener('click', () => analyzeEpisode(ep.mp3_url, ep.transcript_url, ep.transcript_type, null, ep.title, currentPodcastTitle));
           list.appendChild(item);
         });
+        updateAnalyzedBadges();
         showScreen('screen-episodes');
       }
     } catch (e) {
