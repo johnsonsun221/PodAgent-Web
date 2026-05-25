@@ -811,6 +811,9 @@
   function isYouTubeUrl(url) {
     return /^https?:\/\/(www\.)?(youtube\.com\/watch|youtu\.be\/)/.test(url.trim());
   }
+  function isYouTubeChannelUrl(url) {
+    return /youtube\.com\/(channel\/|user\/|c\/|@)/.test(url.trim());
+  }
 
   // ── Analyzed badges ──
   function updateAnalyzedBadges() {
@@ -928,8 +931,39 @@
     btn.textContent = '載入中...';
 
     try {
-      if (isYouTubeUrl(input)) {
-        // ── YouTube 流程 ──
+      if (isYouTubeChannelUrl(input)) {
+        // ── YouTube 頻道流程 ──
+        const res = await fetch(`${API_BASE()}/youtube/channel?url=${encodeURIComponent(input)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        saveToHistory(`📺 ${data.channel_title}`, input);
+        document.getElementById('podcast-title').textContent = data.channel_title;
+        document.getElementById('episode-count').textContent = `共 ${data.videos.length} 支影片 · 點選開始分析`;
+
+        const list = document.getElementById('episode-list');
+        list.innerHTML = '';
+        data.videos.forEach((v, i) => {
+          const item = document.createElement('div');
+          item.className = 'episode-item';
+          item.innerHTML = `
+            <span class="ep-num">${String(i + 1).padStart(2, '0')}</span>
+            <div class="ep-info">
+              <div class="ep-title">${escHtml(v.title)}</div>
+              <div class="ep-date">${v.upload_date || '—'}${v.duration ? ' · ' + fmtDuration(v.duration) : ''}</div>
+            </div>
+            <span class="transcript-badge">YT</span>
+            <span class="ep-arrow">›</span>
+          `;
+          item.dataset.episodeUrl = v.url;
+          item.addEventListener('click', () => analyzeEpisode(null, null, null, v.url, v.title, data.channel_title));
+          list.appendChild(item);
+        });
+        updateAnalyzedBadges();
+        showScreen('screen-episodes');
+
+      } else if (isYouTubeUrl(input)) {
+        // ── YouTube 單支影片流程 ──
         const res = await fetch(`${API_BASE()}/youtube/info?url=${encodeURIComponent(input)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const info = await res.json();
