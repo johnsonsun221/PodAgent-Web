@@ -418,9 +418,29 @@
     #done-lottie {
       display: flex;
       justify-content: center;
-      margin-bottom: 8px;
+      overflow: hidden;
+      opacity: 0;
+      max-height: 0;
+      margin-bottom: 0;
+      /* 消失：先淡出，再收縮 */
+      transition: opacity .35s ease,
+                  max-height .45s cubic-bezier(.4,0,.2,1) .3s,
+                  margin-bottom .45s cubic-bezier(.4,0,.2,1) .3s;
     }
-    #done-lottie.hidden { display: none; }
+    #done-lottie.visible {
+      opacity: 1;
+      max-height: 150px;
+      margin-bottom: 16px;
+      /* 出現：先展開，再淡入 */
+      transition: max-height .28s ease,
+                  opacity .3s ease .1s,
+                  margin-bottom .28s ease;
+      animation: lottie-pop .38s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes lottie-pop {
+      from { transform: scale(.7); }
+      to   { transform: scale(1); }
+    }
     .summary-header h1 { font-size: 22px; font-weight: 700; }
 
     .section-label {
@@ -812,7 +832,7 @@
 
   <!-- ════════ SUMMARY ════════ -->
   <section id="screen-summary" class="screen">
-    <div id="done-lottie" class="hidden">
+    <div id="done-lottie">
       <lottie-player
         id="done-lottie-player"
         src="https://assets2.lottiefiles.com/packages/lf20_jbrw3hcz.json"
@@ -1220,12 +1240,19 @@
   function renderSummary(data) {
     const doneLottie = document.getElementById('done-lottie');
     const donePlayer = document.getElementById('done-lottie-player');
-    doneLottie.classList.remove('hidden');
-    donePlayer.seek(0);
-    donePlayer.play();
-    donePlayer.addEventListener('complete', () => {
-      doneLottie.classList.add('hidden');
-    }, { once: true });
+
+    // 先瞬間重置（不帶過渡），再下一幀觸發入場動畫
+    doneLottie.style.transition = 'none';
+    doneLottie.classList.remove('visible');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      doneLottie.style.transition = '';
+      doneLottie.classList.add('visible');
+      donePlayer.seek(0);
+      donePlayer.play();
+      donePlayer.addEventListener('complete', () => {
+        doneLottie.classList.remove('visible'); // 觸發兩段式消失過渡
+      }, { once: true });
+    }));
 
     document.getElementById('summary-text').textContent = data.answer || '（無摘要）';
 
