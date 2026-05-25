@@ -41,6 +41,8 @@
       padding: 48px 24px 80px;
       flex-direction: column;
       animation: fadeIn .25s ease;
+      position: relative;
+      z-index: 1;
     }
     .screen.active { display: flex; }
 
@@ -586,6 +588,65 @@
     }
     .search-all-link:hover { color: var(--text); }
 
+    /* ── Orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(100px);
+      will-change: transform;
+    }
+    .orb-1 { width: 420px; height: 420px; background: var(--accent); opacity: .055; top: 0; left: 0; }
+    .orb-2 { width: 280px; height: 280px; background: var(--purple); opacity: .07; top: 0; left: 0; }
+
+    /* ── Custom cursor (only on pointer-fine devices) ── */
+    @media (pointer: fine) {
+      * { cursor: none !important; }
+    }
+    .cursor-dot, .cursor-ring { display: none; }
+    @media (pointer: fine) {
+      .cursor-dot {
+        display: block;
+        position: fixed;
+        width: 6px; height: 6px;
+        background: var(--accent);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        will-change: left, top;
+      }
+      .cursor-ring {
+        display: block;
+        position: fixed;
+        width: 28px; height: 28px;
+        border: 1.5px solid rgba(204,255,0,.45);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9998;
+        transform: translate(-50%, -50%);
+        transition: width .18s, height .18s, border-color .18s;
+        will-change: left, top;
+      }
+      .cursor-ring.hover {
+        width: 46px; height: 46px;
+        border-color: rgba(204,255,0,.85);
+      }
+    }
+
+    /* ── Sticky podcast header ── */
+    .podcast-header-wrap {
+      position: sticky;
+      top: 0;
+      background: rgba(13,13,13,.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 10;
+      margin: -8px -24px 0;
+      padding: 16px 24px 12px;
+    }
+
     /* ── Toast ── */
     #toast {
       position: fixed;
@@ -608,6 +669,11 @@
   </style>
 </head>
 <body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="cursor-dot" id="cursor-dot"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+
 <div id="app">
 
   <!-- ════════ HOME ════════ -->
@@ -669,15 +735,16 @@
   <section id="screen-episodes" class="screen">
     <button class="back-btn" id="back-from-episodes">←</button>
 
-    <div class="podcast-header">
-      <div class="podcast-icon">🎙️</div>
-      <div>
-        <div class="podcast-title" id="podcast-title">—</div>
-        <div class="episode-count">共 <span id="episode-count">0</span> 集 · 點選開始分析</div>
+    <div class="podcast-header-wrap">
+      <div class="podcast-header">
+        <div class="podcast-icon">🎙️</div>
+        <div>
+          <div class="podcast-title" id="podcast-title">—</div>
+          <div class="episode-count">共 <span id="episode-count">0</span> 集 · 點選開始分析</div>
+        </div>
       </div>
+      <div class="divider" style="margin:12px 0 0"></div>
     </div>
-
-    <div class="divider"></div>
     <div class="episode-list" id="episode-list"></div>
   </section>
 
@@ -1256,6 +1323,56 @@
   document.getElementById('rss-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('btn-get-episodes').click();
   });
+
+  // ── Mouse following: orbs + custom cursor ──
+  (function () {
+    const dot  = document.getElementById('cursor-dot');
+    const ring = document.getElementById('cursor-ring');
+    const orb1 = document.querySelector('.orb-1');
+    const orb2 = document.querySelector('.orb-2');
+
+    let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+    let rx = mx, ry = my;
+    let o1x = mx, o1y = my;
+    let o2x = mx * .7, o2y = my * .7;
+
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+    document.addEventListener('mouseover', e => {
+      if (e.target.closest('button, a, .episode-item, .history-item, .search-result, input, .search-all-link')) {
+        ring.classList.add('hover');
+      } else {
+        ring.classList.remove('hover');
+      }
+    });
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function tick() {
+      // Cursor dot: immediate
+      dot.style.left = mx + 'px';
+      dot.style.top  = my + 'px';
+
+      // Cursor ring: lag
+      rx = lerp(rx, mx, .1);
+      ry = lerp(ry, my, .1);
+      ring.style.left = rx + 'px';
+      ring.style.top  = ry + 'px';
+
+      // Orb 1: slow follow (accent)
+      o1x = lerp(o1x, mx, .035);
+      o1y = lerp(o1y, my, .035);
+      orb1.style.transform = `translate(${o1x - 210}px,${o1y - 210}px)`;
+
+      // Orb 2: medium follow (purple), offset direction
+      o2x = lerp(o2x, window.innerWidth - mx, .055);
+      o2y = lerp(o2y, window.innerHeight - my, .055);
+      orb2.style.transform = `translate(${o2x - 140}px,${o2y - 140}px)`;
+
+      requestAnimationFrame(tick);
+    }
+    tick();
+  })();
 
   // ── Utils ──
   function escHtml(str) {
