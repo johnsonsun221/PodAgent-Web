@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PodAgent — AI 幫你聽完</title>
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.8/dist/lottie-player.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -304,9 +305,9 @@
     }
 
     .proc-icon {
-      font-size: 40px;
-      margin-bottom: 20px;
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 8px;
     }
 
     .proc-title {
@@ -412,6 +413,12 @@
       gap: 12px;
       margin-bottom: 32px;
     }
+    #done-lottie {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    #done-lottie.hidden { display: none; }
     .summary-header h1 { font-size: 22px; font-weight: 700; }
 
     .section-label {
@@ -676,7 +683,15 @@
 
   <!-- ════════ PROCESSING ════════ -->
   <section id="screen-processing" class="screen">
-    <div class="proc-icon">🎙️</div>
+    <div class="proc-icon">
+      <lottie-player
+        src="https://assets2.lottiefiles.com/packages/lf20_qp1q7mct.json"
+        background="transparent"
+        speed="1"
+        style="width:160px;height:160px"
+        loop autoplay>
+      </lottie-player>
+    </div>
     <div class="proc-title">AI 分析中</div>
     <div class="proc-current-step" id="proc-current-step">初始化...</div>
 
@@ -706,6 +721,15 @@
 
   <!-- ════════ SUMMARY ════════ -->
   <section id="screen-summary" class="screen">
+    <div id="done-lottie" class="hidden">
+      <lottie-player
+        id="done-lottie-player"
+        src="https://assets2.lottiefiles.com/packages/lf20_jbrw3hcz.json"
+        background="transparent"
+        speed="1"
+        style="width:120px;height:120px">
+      </lottie-player>
+    </div>
     <div class="summary-header">
       <button class="back-btn" id="back-from-summary" style="margin:0">←</button>
       <h1>摘要重點</h1>
@@ -1103,6 +1127,15 @@
 
   // ── Render Summary ──
   function renderSummary(data) {
+    const doneLottie = document.getElementById('done-lottie');
+    const donePlayer = document.getElementById('done-lottie-player');
+    doneLottie.classList.remove('hidden');
+    donePlayer.seek(0);
+    donePlayer.play();
+    donePlayer.addEventListener('complete', () => {
+      doneLottie.classList.add('hidden');
+    }, { once: true });
+
     document.getElementById('summary-text').textContent = data.answer || '（無摘要）';
 
     const kpList = document.getElementById('keypoints-list');
