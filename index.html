@@ -717,6 +717,22 @@
 <script>
   const API_BASE = () => document.getElementById('api-url').value.replace(/\/$/, '');
 
+  // ── Episode cache (localStorage) ──
+  const CACHE_KEY = 'podagent_cache';
+
+  function getCachedResult(episodeUrl) {
+    try { return (JSON.parse(localStorage.getItem(CACHE_KEY)) || {})[episodeUrl] || null; }
+    catch { return null; }
+  }
+
+  function setCachedResult(episodeUrl, result) {
+    try {
+      const cache = JSON.parse(localStorage.getItem(CACHE_KEY)) || {};
+      cache[episodeUrl] = result;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    } catch {}
+  }
+
   // ── History (localStorage) ──
   const HISTORY_KEY = 'podagent_history';
   const MAX_HISTORY = 10;
@@ -960,6 +976,13 @@
     currentEpisodeUrl = youtubeUrl || mp3Url || '';
     document.getElementById('chat-messages').innerHTML = '';
 
+    const cached = getCachedResult(currentEpisodeUrl);
+    if (cached) {
+      renderSummary(cached);
+      showScreen('screen-summary');
+      return;
+    }
+
     let url;
     if (youtubeUrl) {
       url = `${API_BASE()}/analyze/stream?youtube_url=${encodeURIComponent(youtubeUrl)}`;
@@ -992,6 +1015,7 @@
       if (data.progress === 100) {
         completed = true;
         es.close(); activeSource = null;
+        setCachedResult(currentEpisodeUrl, data.result);
         renderSummary(data.result);
         showScreen('screen-summary');
       }
