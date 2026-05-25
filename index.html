@@ -606,6 +606,14 @@
     }
     .cursor-dot, .cursor-ring { display: none; }
     @media (pointer: fine) {
+      #cursor-trail {
+        display: block;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+        z-index: 9;
+      }
       .cursor-dot {
         display: block;
         position: fixed;
@@ -616,6 +624,21 @@
         z-index: 9999;
         transform: translate(-50%, -50%);
         will-change: left, top;
+        transition: transform .08s;
+      }
+      .cursor-dot.clicking { transform: translate(-50%, -50%) scale(.5); }
+      .cursor-ripple {
+        position: fixed;
+        width: 4px; height: 4px;
+        border: 1.5px solid var(--accent);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 9997;
+        animation: cursor-ripple-out .55s ease-out forwards;
+      }
+      @keyframes cursor-ripple-out {
+        to { width: 60px; height: 60px; opacity: 0; }
       }
       .cursor-ring {
         display: block;
@@ -671,6 +694,7 @@
 <body>
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
+<canvas id="cursor-trail"></canvas>
 <div class="cursor-dot" id="cursor-dot"></div>
 <div class="cursor-ring" id="cursor-ring"></div>
 
@@ -1324,17 +1348,31 @@
     if (e.key === 'Enter') document.getElementById('btn-get-episodes').click();
   });
 
-  // ── Mouse following: orbs + custom cursor ──
+  // ── Mouse following: orbs + custom cursor + trail + ripple ──
   (function () {
-    const dot  = document.getElementById('cursor-dot');
-    const ring = document.getElementById('cursor-ring');
-    const orb1 = document.querySelector('.orb-1');
-    const orb2 = document.querySelector('.orb-2');
+    const dot    = document.getElementById('cursor-dot');
+    const ring   = document.getElementById('cursor-ring');
+    const orb1   = document.querySelector('.orb-1');
+    const orb2   = document.querySelector('.orb-2');
+    const canvas = document.getElementById('cursor-trail');
+    const ctx    = canvas ? canvas.getContext('2d') : null;
 
     let mx = window.innerWidth / 2, my = window.innerHeight / 2;
     let rx = mx, ry = my;
     let o1x = mx, o1y = my;
     let o2x = mx * .7, o2y = my * .7;
+
+    // Trail points
+    const TRAIL = 22;
+    const pts = Array.from({length: TRAIL}, () => ({x: mx, y: my}));
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
     document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
 
@@ -1345,6 +1383,18 @@
         ring.classList.remove('hover');
       }
     });
+
+    // Click ripple
+    document.addEventListener('mousedown', e => {
+      dot.classList.add('clicking');
+      const r = document.createElement('div');
+      r.className = 'cursor-ripple';
+      r.style.left = e.clientX + 'px';
+      r.style.top  = e.clientY + 'px';
+      document.body.appendChild(r);
+      r.addEventListener('animationend', () => r.remove());
+    });
+    document.addEventListener('mouseup', () => dot.classList.remove('clicking'));
 
     function lerp(a, b, t) { return a + (b - a) * t; }
 
@@ -1368,6 +1418,22 @@
       o2x = lerp(o2x, window.innerWidth - mx, .055);
       o2y = lerp(o2y, window.innerHeight - my, .055);
       orb2.style.transform = `translate(${o2x - 140}px,${o2y - 140}px)`;
+
+      // Trail
+      if (ctx) {
+        pts.pop();
+        pts.unshift({x: mx, y: my});
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        pts.forEach((p, i) => {
+          const t = i / TRAIL;
+          const alpha = (1 - t) * .35;
+          const r = (1 - t) * 4;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, Math.max(r, .5), 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(204,255,0,${alpha})`;
+          ctx.fill();
+        });
+      }
 
       requestAnimationFrame(tick);
     }
