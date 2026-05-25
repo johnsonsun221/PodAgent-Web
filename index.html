@@ -4,26 +4,36 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PodAgent — AI 幫你聽完</title>
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.8/dist/lottie-player.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0d0d0d;
-      --surface: #1a1a1a;
-      --border: #2a2a2a;
-      --accent: #ccff00;
-      --accent-dim: rgba(204,255,0,0.12);
-      --text: #ffffff;
-      --muted: #888;
-      --purple: #9b9bff;
+      --bg:         #09090b;
+      --surface:    #131316;
+      --surface-2:  #1a1a1f;
+      --border:     rgba(255,255,255,.06);
+      --border-h:   rgba(255,255,255,.12);
+      --accent:     #a3e635;
+      --accent-soft: rgba(163,230,53,.10);
+      --accent-mid:  rgba(163,230,53,.20);
+      --text:       #fafafa;
+      --text-2:     #a1a1aa;
+      --text-3:     #52525b;
+      --danger:     #ef4444;
+      --radius:     12px;
+      --radius-lg:  16px;
+      --radius-xl:  20px;
     }
 
     html, body {
       height: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* ── Layout ── */
@@ -37,108 +47,232 @@
     .screen {
       display: none;
       width: 100%;
-      max-width: 680px;
-      padding: 48px 24px 80px;
+      max-width: 640px;
+      padding: 32px 20px 100px;
       flex-direction: column;
-      animation: fadeIn .25s ease;
       position: relative;
       z-index: 1;
     }
-    .screen.active { display: flex; }
+    .screen.active {
+      display: flex;
+      animation: screenIn .35s cubic-bezier(.2,.9,.3,1);
+    }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+    @keyframes screenIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-    /* ── Header ── */
+    /* ── Global Nav ── */
+    .nav-bar {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 28px;
+    }
+
     .logo {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
+      gap: 10px;
+      font-size: 15px;
       font-weight: 700;
-      letter-spacing: 2px;
-      color: var(--accent);
-      text-transform: uppercase;
-      margin-bottom: 40px;
+      letter-spacing: .5px;
+      color: var(--text);
     }
-    .logo-icon { font-size: 20px; }
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #65a30d);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
 
-    /* ── Home ── */
-    .hero-title {
-      font-size: clamp(36px, 8vw, 56px);
-      font-weight: 800;
-      line-height: 1.1;
-      margin-bottom: 16px;
+    .nav-link {
+      font-size: 13px;
+      color: var(--text-2);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: all .15s;
+      text-decoration: none;
     }
-    .hero-title .highlight { color: var(--accent); }
+    .nav-link:hover { color: var(--text); border-color: var(--border-h); background: var(--surface); }
+
+    /* ── Back button ── */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 6px 0;
+      margin-bottom: 20px;
+      transition: color .15s;
+      align-self: flex-start;
+    }
+    .back-btn:hover { color: var(--text); }
+    .back-btn svg { width: 16px; height: 16px; }
+
+    /* ── Hero ── */
+    .hero-title {
+      font-size: clamp(32px, 7vw, 48px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -.02em;
+      margin-bottom: 12px;
+    }
+    .hero-title .accent { color: var(--accent); }
 
     .hero-sub {
-      color: var(--muted);
+      color: var(--text-2);
       font-size: 15px;
-      line-height: 1.6;
-      margin-bottom: 48px;
+      line-height: 1.7;
+      margin-bottom: 40px;
     }
 
+    /* ── Input ── */
     .input-group {
       background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 16px;
+      transition: border-color .2s;
+    }
+    .input-group:focus-within {
+      border-color: rgba(163,230,53,.3);
     }
     .input-label {
       font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--text-3);
       text-transform: uppercase;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .input-row {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: var(--bg);
-      border-radius: 10px;
-      padding: 12px 16px;
+      gap: 10px;
     }
-    .input-icon { font-size: 20px; flex-shrink: 0; }
+    .input-icon {
+      color: var(--text-3);
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+    }
     input[type="text"] {
       flex: 1;
       background: transparent;
       border: none;
       outline: none;
       color: var(--text);
-      font-size: 14px;
+      font-size: 15px;
+      font-family: inherit;
     }
-    input[type="text"]::placeholder { color: var(--muted); }
+    input[type="text"]::placeholder { color: var(--text-3); }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width: 100%;
+      padding: 14px 20px;
+      background: var(--accent);
+      color: #000;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(163,230,53,.2); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; filter: none; box-shadow: none; }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 14px 20px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-secondary:hover { border-color: var(--border-h); background: var(--surface-2); }
+
+    .btn-cancel {
+      margin-top: 28px;
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      color: var(--text-3);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-cancel:hover { color: var(--danger); border-color: rgba(239,68,68,.3); }
 
     /* ── History ── */
-    .history-section { margin-bottom: 24px; }
+    .history-section { margin-bottom: 20px; }
 
-    .history-label {
+    .section-title {
       font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--text-3);
       text-transform: uppercase;
       margin-bottom: 10px;
     }
 
-    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    .history-list { display: flex; flex-direction: column; gap: 4px; }
 
     .history-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
+      gap: 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      padding: 10px 12px;
       cursor: pointer;
-      transition: border-color .15s;
+      transition: all .15s;
     }
-    .history-item:hover { border-color: var(--accent); }
+    .history-item:hover { background: var(--surface); border-color: var(--border); }
 
+    .history-item-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--surface-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
     .history-item-info { flex: 1; min-width: 0; }
     .history-item-title {
       font-size: 13px;
@@ -149,152 +283,176 @@
     }
     .history-item-url {
       font-size: 11px;
-      color: var(--muted);
+      color: var(--text-3);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      font-family: monospace;
       margin-top: 2px;
     }
 
     .history-delete {
       background: none;
       border: none;
-      color: var(--muted);
-      font-size: 16px;
+      color: var(--text-3);
+      font-size: 14px;
       cursor: pointer;
-      padding: 2px 4px;
+      padding: 4px;
       flex-shrink: 0;
       line-height: 1;
       transition: color .15s;
+      opacity: 0;
+      border-radius: 6px;
     }
-    .history-delete:hover { color: #ff5555; }
+    .history-item:hover .history-delete { opacity: 1; }
+    .history-delete:hover { color: var(--danger); }
 
-    /* API URL setting */
+    /* ── API row ── */
     .api-row {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
-    .api-row label { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+    .api-row label { font-size: 12px; color: var(--text-3); flex-shrink: 0; font-weight: 500; }
     .api-row input {
       flex: 1;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 8px 12px;
-      color: var(--muted);
+      color: var(--text-3);
       font-size: 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
       outline: none;
+      transition: border-color .15s;
     }
-
-    /* ── Buttons ── */
-    .btn-primary {
-      width: 100%;
-      padding: 18px;
-      background: var(--accent);
-      color: #000;
-      font-size: 16px;
-      font-weight: 700;
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: opacity .15s, transform .1s;
-    }
-    .btn-primary:hover { opacity: .9; }
-    .btn-primary:active { transform: scale(.98); }
-    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
-
-    /* ── Back button ── */
-    .back-btn {
-      background: none;
-      border: none;
-      color: var(--accent);
-      font-size: 22px;
-      cursor: pointer;
-      padding: 0;
-      margin-bottom: 24px;
-      align-self: flex-start;
-      line-height: 1;
-    }
+    .api-row input:focus { border-color: var(--border-h); }
 
     /* ── Episode List ── */
+    .podcast-header-wrap {
+      position: sticky;
+      top: 0;
+      background: rgba(9,9,11,.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 10;
+      margin: 0 -20px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
     .podcast-header {
       display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 8px;
+      align-items: center;
+      gap: 14px;
     }
     .podcast-icon {
-      width: 56px;
-      height: 56px;
-      background: #2a2a4a;
-      border-radius: 14px;
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #2d1b69, #1e3a5f);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 26px;
+      font-size: 22px;
       flex-shrink: 0;
     }
+    .podcast-meta { flex: 1; min-width: 0; }
     .podcast-title {
-      font-size: 20px;
+      font-size: 16px;
       font-weight: 700;
       line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .episode-count {
       font-size: 13px;
-      color: var(--muted);
-      margin-top: 4px;
+      color: var(--text-2);
+      margin-top: 2px;
     }
-    .episode-count span { color: var(--accent); }
+    .episode-count span { color: var(--accent); font-weight: 600; }
 
-    .divider { height: 1px; background: var(--border); margin: 20px 0; }
-
-    .episode-list { display: flex; flex-direction: column; gap: 0; }
+    .episode-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-top: 8px;
+    }
 
     .episode-item {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 18px 0;
-      border-bottom: 1px solid var(--border);
+      gap: 14px;
+      padding: 14px 12px;
       cursor: pointer;
-      transition: background .15s;
-      border-radius: 8px;
-      padding-left: 8px;
-      padding-right: 8px;
+      transition: all .15s;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
     }
-    .episode-item:hover { background: var(--surface); }
-    .episode-item:last-child { border-bottom: none; }
+    .episode-item:hover { background: var(--surface); border-color: var(--border); }
 
     .ep-num {
-      font-size: 13px;
-      color: var(--muted);
+      font-size: 12px;
+      color: var(--text-3);
       font-weight: 600;
-      width: 26px;
+      width: 28px;
       flex-shrink: 0;
-      text-align: right;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
     }
     .ep-info { flex: 1; min-width: 0; }
     .ep-title {
-      font-size: 15px;
-      font-weight: 600;
-      line-height: 1.4;
-      margin-bottom: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.5;
+      margin-bottom: 3px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
-    .ep-date { font-size: 12px; color: var(--purple); font-family: monospace; }
-    .ep-arrow { color: var(--muted); font-size: 16px; flex-shrink: 0; }
+    .ep-date {
+      font-size: 12px;
+      color: var(--text-3);
+      font-variant-numeric: tabular-nums;
+    }
+    .ep-arrow {
+      color: var(--text-3);
+      font-size: 14px;
+      flex-shrink: 0;
+      opacity: 0;
+      transform: translateX(-4px);
+      transition: all .15s;
+    }
+    .episode-item:hover .ep-arrow { opacity: 1; transform: translateX(0); }
 
     .transcript-badge {
       font-size: 10px;
-      font-weight: 700;
+      font-weight: 600;
       letter-spacing: .5px;
-      color: #000;
-      background: var(--accent);
-      border-radius: 4px;
-      padding: 2px 6px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 6px;
+      padding: 3px 8px;
       flex-shrink: 0;
+    }
+
+    .analyzed-badge {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 600;
+      padding: 3px 8px;
+      background: var(--accent-soft);
+      border-radius: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .episode-item.analyzed {
+      background: var(--accent-soft);
+    }
+    .episode-item.analyzed:hover {
+      background: var(--accent-mid);
     }
 
     /* ── Processing ── */
@@ -306,75 +464,138 @@
       gap: 0;
     }
 
-    .proc-icon {
+    .proc-header {
+      text-align: center;
+      margin-bottom: 32px;
+      width: 100%;
+    }
+
+    .proc-anim {
       display: flex;
       justify-content: center;
-      margin-bottom: 8px;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+    .pulse-rings {
+      position: relative;
+      width: 100px;
+      height: 100px;
+    }
+    .pulse-rings .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      opacity: 0;
+      animation: pulse-ring 2.4s cubic-bezier(.4,0,.6,1) infinite;
+    }
+    .pulse-rings .ring:nth-child(2) { animation-delay: .8s; }
+    .pulse-rings .ring:nth-child(3) { animation-delay: 1.6s; }
+    @keyframes pulse-ring {
+      0%   { transform: scale(.5); opacity: .6; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    .pulse-rings .core {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 36px; height: 36px;
+      margin: -18px 0 0 -18px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 30px rgba(163,230,53,.4);
+      animation: core-breathe 2s ease-in-out infinite;
+    }
+    .pulse-rings .core-icon {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      font-size: 16px;
+      line-height: 1;
+    }
+    @keyframes core-breathe {
+      0%,100% { transform: scale(1); box-shadow: 0 0 30px rgba(163,230,53,.4); }
+      50%     { transform: scale(1.1); box-shadow: 0 0 50px rgba(163,230,53,.6); }
     }
 
     .proc-title {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
-      text-align: center;
       margin-bottom: 6px;
     }
 
     .proc-current-step {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--accent);
-      text-align: center;
-      margin-bottom: 20px;
       min-height: 20px;
-      font-family: monospace;
-      letter-spacing: .5px;
+      font-weight: 500;
+    }
+
+    .progress-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 4px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .progress-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+    }
+    .progress-pct {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
     }
 
     .progress-track {
       width: 100%;
-      height: 6px;
-      background: var(--surface);
+      height: 4px;
+      background: var(--surface-2);
       border-radius: 99px;
       overflow: hidden;
-      margin-bottom: 8px;
     }
     .progress-fill {
       height: 100%;
-      background: var(--accent);
+      background: linear-gradient(90deg, #65a30d, var(--accent));
       border-radius: 99px;
-      transition: width .6s ease;
+      transition: width .6s cubic-bezier(.4,0,.2,1);
       width: 0%;
-    }
-
-    .progress-pct {
-      font-size: 13px;
-      color: var(--muted);
-      text-align: right;
-      margin-bottom: 32px;
-      font-family: monospace;
     }
 
     .step-checklist {
       display: flex;
       flex-direction: column;
       gap: 0;
-      width: 100%;
     }
 
     .step-row {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 11px 0;
+      padding: 14px 20px;
+      font-size: 13px;
       border-bottom: 1px solid var(--border);
-      font-size: 14px;
+      background: var(--surface);
+      transition: background .2s;
     }
-    .step-row:last-child { border-bottom: none; }
+    .step-row:first-child { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+    .step-row:last-child  { border-radius: 0 0 var(--radius-lg) var(--radius-lg); border-bottom: none; }
+    .step-row:only-child  { border-radius: var(--radius-lg); }
 
     .step-dot {
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
-      border: 1.5px solid var(--border);
+      border: 2px solid var(--border-h);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -382,74 +603,130 @@
       flex-shrink: 0;
       transition: all .3s;
     }
-    .step-dot.done   { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700; }
-    .step-dot.active { border-color: var(--accent); animation: dotPulse 1s ease-in-out infinite; }
+    .step-dot.done {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+    .step-dot.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+      animation: dotPulse 1.5s ease-in-out infinite;
+    }
     @keyframes dotPulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(204,255,0,.5); }
-      50%      { box-shadow: 0 0 0 5px rgba(204,255,0,0); }
+      0%,100% { box-shadow: 0 0 0 3px rgba(163,230,53,.15); }
+      50%     { box-shadow: 0 0 0 6px rgba(163,230,53,.05); }
     }
 
-    .step-name { color: var(--muted); transition: color .3s; }
-    .step-row.active .step-name  { color: var(--text); font-weight: 600; }
-    .step-row.done   .step-name  { color: var(--muted); }
+    .step-name { color: var(--text-3); transition: color .3s; font-weight: 500; }
+    .step-row.active .step-name { color: var(--text); }
+    .step-row.done .step-name   { color: var(--text-2); }
 
-    .btn-cancel {
-      margin-top: 32px;
-      width: 100%;
-      padding: 14px;
-      background: transparent;
-      color: var(--muted);
-      font-size: 14px;
+    .whisper-skip {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-3);
       font-weight: 500;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      cursor: pointer;
-      transition: color .15s, border-color .15s;
     }
-    .btn-cancel:hover { color: #ff5555; border-color: #ff5555; }
 
     /* ── Summary ── */
-    .summary-header {
+    .summary-nav {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 32px;
+      margin-bottom: 28px;
     }
-    #done-lottie {
+    .summary-nav h1 { font-size: 22px; font-weight: 700; flex: 1; }
+
+    #done-anim {
       display: flex;
       justify-content: center;
       overflow: hidden;
       opacity: 0;
       max-height: 0;
       margin-bottom: 0;
-      /* 消失：先淡出，再收縮 */
       transition: opacity .35s ease,
-                  max-height .45s cubic-bezier(.4,0,.2,1) .3s,
-                  margin-bottom .45s cubic-bezier(.4,0,.2,1) .3s;
+                  max-height .45s cubic-bezier(.4,0,.2,1) .25s,
+                  margin-bottom .45s cubic-bezier(.4,0,.2,1) .25s;
     }
-    #done-lottie.visible {
+    #done-anim.visible {
       opacity: 1;
-      max-height: 150px;
+      max-height: 130px;
       margin-bottom: 16px;
-      /* 出現：先展開，再淡入 */
-      transition: max-height .28s ease,
+      transition: max-height .3s ease,
                   opacity .3s ease .1s,
-                  margin-bottom .28s ease;
-      animation: lottie-pop .38s cubic-bezier(.34,1.56,.64,1);
+                  margin-bottom .3s ease;
     }
-    @keyframes lottie-pop {
-      from { transform: scale(.7); }
-      to   { transform: scale(1); }
+    .done-circle {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: done-pop .5s cubic-bezier(.34,1.56,.64,1);
+      position: relative;
     }
-    .summary-header h1 { font-size: 22px; font-weight: 700; }
+    @keyframes done-pop {
+      from { transform: scale(0) rotate(-45deg); }
+      to   { transform: scale(1) rotate(0); }
+    }
+    .done-circle svg {
+      width: 32px;
+      height: 32px;
+      stroke: #000;
+      stroke-width: 3;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .done-circle svg path {
+      stroke-dasharray: 40;
+      stroke-dashoffset: 40;
+      animation: check-draw .4s ease .3s forwards;
+    }
+    @keyframes check-draw {
+      to { stroke-dashoffset: 0; }
+    }
+    .done-particles {
+      position: absolute;
+      inset: -20px;
+    }
+    .done-particles span {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      top: 50%; left: 50%;
+      animation: particle-burst .6s cubic-bezier(.2,.8,.3,1) forwards;
+    }
+    .done-particles span:nth-child(1) { animation-delay: .2s; --px: -40px; --py: -30px; }
+    .done-particles span:nth-child(2) { animation-delay: .25s; --px: 35px; --py: -35px; }
+    .done-particles span:nth-child(3) { animation-delay: .3s; --px: 40px; --py: 25px; }
+    .done-particles span:nth-child(4) { animation-delay: .22s; --px: -35px; --py: 30px; }
+    .done-particles span:nth-child(5) { animation-delay: .28s; --px: 0px; --py: -45px; }
+    .done-particles span:nth-child(6) { animation-delay: .32s; --px: -25px; --py: -40px; background: #818cf8; }
+    .done-particles span:nth-child(7) { animation-delay: .26s; --px: 30px; --py: -10px; background: #818cf8; }
+    .done-particles span:nth-child(8) { animation-delay: .34s; --px: -10px; --py: 40px; background: #f472b6; }
+    @keyframes particle-burst {
+      0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--px), var(--py)) scale(0); opacity: 0; }
+    }
+
+    .content-section {
+      margin-bottom: 28px;
+    }
 
     .section-label {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 700;
-      color: var(--accent);
-      letter-spacing: 1.5px;
+      color: var(--text-3);
+      letter-spacing: 1px;
       text-transform: uppercase;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -458,23 +735,21 @@
       content: '';
       flex: 1;
       height: 1px;
-      background: var(--accent);
-      opacity: .3;
+      background: var(--border);
     }
 
     .summary-box {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: var(--radius-lg);
       padding: 20px;
-      font-size: 15px;
-      line-height: 1.75;
-      color: #ddd;
-      margin-bottom: 36px;
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text-2);
       border-left: 3px solid var(--accent);
     }
 
-    .keypoints { display: flex; flex-direction: column; gap: 12px; margin-bottom: 36px; }
+    .keypoints { display: flex; flex-direction: column; gap: 8px; }
 
     .keypoint-item {
       display: flex;
@@ -482,149 +757,168 @@
       gap: 14px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: var(--radius);
       padding: 16px;
+      transition: border-color .15s;
     }
+    .keypoint-item:hover { border-color: var(--border-h); }
+
     .kp-num {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
       color: var(--accent);
       flex-shrink: 0;
       width: 24px;
-      padding-top: 1px;
+      height: 24px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .kp-text { font-size: 14px; line-height: 1.6; color: #ddd; }
-
-    .btn-secondary {
-      width: 100%;
-      padding: 16px;
-      background: transparent;
-      color: var(--accent);
-      font-size: 15px;
-      font-weight: 600;
-      border: 1.5px solid var(--accent);
-      border-radius: 14px;
-      cursor: pointer;
-      transition: background .15s;
-    }
-    .btn-secondary:hover { background: var(--accent-dim); }
+    .kp-text { font-size: 14px; line-height: 1.7; color: var(--text-2); }
 
     /* ── Chat ── */
+    .chat-section {
+      margin-bottom: 28px;
+    }
+
     .chat-messages {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin-bottom: 16px;
-      max-height: 360px;
+      gap: 8px;
+      margin-bottom: 12px;
+      max-height: 400px;
       overflow-y: auto;
+      scroll-behavior: smooth;
     }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border-h); border-radius: 4px; }
+
     .chat-bubble {
       max-width: 85%;
       padding: 12px 16px;
-      border-radius: 14px;
+      border-radius: var(--radius-lg);
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.7;
     }
     .chat-bubble.user {
       align-self: flex-end;
       background: var(--accent);
       color: #000;
       font-weight: 500;
+      border-bottom-right-radius: 4px;
     }
     .chat-bubble.ai {
       align-self: flex-start;
       background: var(--surface);
       border: 1px solid var(--border);
-      color: #ddd;
+      color: var(--text-2);
+      border-bottom-left-radius: 4px;
     }
-    .chat-bubble.loading { color: var(--muted); font-style: italic; }
+    .chat-bubble.loading {
+      color: var(--text-3);
+    }
+    .chat-bubble.loading::after {
+      content: '';
+      display: inline-block;
+      width: 12px;
+      animation: dots 1.2s steps(4) infinite;
+    }
+    @keyframes dots {
+      0%  { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+    }
+
     .chat-input-row {
       display: flex;
-      gap: 10px;
-      margin-bottom: 32px;
+      gap: 8px;
     }
     .chat-input-row input {
       flex: 1;
       background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       padding: 12px 16px;
       color: var(--text);
       font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
     }
-    .chat-input-row input:focus { outline: none; border-color: var(--accent); }
+    .chat-input-row input:focus { border-color: rgba(163,230,53,.3); }
     .chat-send-btn {
       padding: 12px 20px;
       background: var(--accent);
       color: #000;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
+      font-family: inherit;
       border: none;
-      border-radius: 12px;
+      border-radius: var(--radius);
       cursor: pointer;
+      transition: all .15s;
     }
+    .chat-send-btn:hover { filter: brightness(1.1); }
     .chat-send-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-    /* ── Search screen ── */
+    /* ── Search ── */
     .search-result {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: var(--radius);
       padding: 16px;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
+      transition: border-color .15s;
     }
-    .search-result-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-    .search-result-podcast { font-size: 12px; color: var(--accent); margin-bottom: 8px; }
-    .search-result-excerpt { font-size: 13px; color: var(--muted); line-height: 1.6; }
-    .no-results { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
+    .search-result:hover { border-color: var(--border-h); }
+    .search-result-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .search-result-podcast { font-size: 12px; color: var(--accent); margin-bottom: 8px; font-weight: 500; }
+    .search-result-excerpt { font-size: 13px; color: var(--text-3); line-height: 1.7; }
+    .no-results { text-align: center; color: var(--text-3); padding: 48px 0; font-size: 14px; }
 
-    /* ── Analyzed badge ── */
-    .analyzed-badge {
-      font-size: 10px;
-      color: var(--accent);
-      font-weight: 700;
-      padding: 2px 6px;
-      border: 1px solid var(--accent);
-      border-radius: 6px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .episode-item.analyzed {
-      border-left: 3px solid var(--accent);
-      padding-left: 6px;
-      background: rgba(204,255,0,0.04);
-    }
-
-    /* ── Search link on home ── */
-    .search-all-link {
-      display: block;
-      text-align: center;
-      color: var(--muted);
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1c1c22;
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: var(--radius);
       font-size: 13px;
-      cursor: pointer;
-      margin-bottom: 16px;
-      text-decoration: underline;
-      text-underline-offset: 3px;
+      font-weight: 500;
+      transition: transform .3s cubic-bezier(.2,.9,.3,1);
+      z-index: 999;
+      white-space: nowrap;
+      max-width: calc(100vw - 48px);
+      text-align: center;
+      border: 1px solid rgba(239,68,68,.3);
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
     }
-    .search-all-link:hover { color: var(--text); }
+    #toast.show { transform: translateX(-50%) translateY(0); }
 
-    /* ── Orbs ── */
+    /* ── Floating Orbs (mouse-following) ── */
     .orb {
       position: fixed;
       border-radius: 50%;
       pointer-events: none;
       z-index: 0;
-      filter: blur(100px);
+      filter: blur(110px);
       will-change: transform;
     }
-    .orb-1 { width: 420px; height: 420px; background: var(--accent); opacity: .055; top: 0; left: 0; }
-    .orb-2 { width: 280px; height: 280px; background: var(--purple); opacity: .07; top: 0; left: 0; }
+    .orb-1 { width: 450px; height: 450px; background: var(--accent); opacity: .05; top: 0; left: 0; }
+    .orb-2 { width: 300px; height: 300px; background: #818cf8; opacity: .06; top: 0; left: 0; }
+    .orb-3 { width: 200px; height: 200px; background: #f472b6; opacity: .035; top: 0; left: 0; }
 
-    /* ── Custom cursor (only on pointer-fine devices) ── */
+    /* ── Custom Cursor ── */
     @media (pointer: fine) {
       * { cursor: none !important; }
     }
-    .cursor-dot, .cursor-ring { display: none; }
+    .cursor-dot, .cursor-ring, #cursor-trail { display: none; }
     @media (pointer: fine) {
       #cursor-trail {
         display: block;
@@ -637,83 +931,93 @@
       .cursor-dot {
         display: block;
         position: fixed;
-        width: 6px; height: 6px;
+        width: 5px; height: 5px;
         background: var(--accent);
         border-radius: 50%;
         pointer-events: none;
         z-index: 9999;
         transform: translate(-50%, -50%);
         will-change: left, top;
-        transition: transform .08s;
+        transition: transform .06s, width .15s, height .15s, background .15s;
+        box-shadow: 0 0 8px rgba(163,230,53,.5);
       }
-      .cursor-dot.clicking { transform: translate(-50%, -50%) scale(.5); }
+      .cursor-dot.clicking {
+        transform: translate(-50%, -50%) scale(.4);
+      }
+      .cursor-dot.hovering {
+        width: 8px; height: 8px;
+        background: #fff;
+        box-shadow: 0 0 12px rgba(255,255,255,.4);
+      }
+      .cursor-ring {
+        display: block;
+        position: fixed;
+        width: 32px; height: 32px;
+        border: 1.5px solid rgba(163,230,53,.35);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9998;
+        transform: translate(-50%, -50%);
+        transition: width .22s cubic-bezier(.25,.8,.25,1),
+                    height .22s cubic-bezier(.25,.8,.25,1),
+                    border-color .2s,
+                    background .2s,
+                    opacity .2s;
+        will-change: left, top;
+      }
+      .cursor-ring.hover {
+        width: 52px; height: 52px;
+        border-color: rgba(163,230,53,.6);
+        background: rgba(163,230,53,.06);
+      }
       .cursor-ripple {
         position: fixed;
-        width: 4px; height: 4px;
+        width: 6px; height: 6px;
         border: 1.5px solid var(--accent);
         border-radius: 50%;
         transform: translate(-50%, -50%);
         pointer-events: none;
         z-index: 9997;
-        animation: cursor-ripple-out .55s ease-out forwards;
+        animation: ripple-expand .5s cubic-bezier(.2,.8,.3,1) forwards;
       }
-      @keyframes cursor-ripple-out {
-        to { width: 60px; height: 60px; opacity: 0; }
+      @keyframes ripple-expand {
+        to { width: 50px; height: 50px; opacity: 0; }
       }
-      .cursor-ring {
-        display: block;
+      .cursor-ripple-2 {
         position: fixed;
-        width: 28px; height: 28px;
-        border: 1.5px solid rgba(204,255,0,.45);
+        width: 6px; height: 6px;
+        border: 1px solid rgba(163,230,53,.4);
         border-radius: 50%;
-        pointer-events: none;
-        z-index: 9998;
         transform: translate(-50%, -50%);
-        transition: width .18s, height .18s, border-color .18s;
-        will-change: left, top;
+        pointer-events: none;
+        z-index: 9996;
+        animation: ripple-expand-2 .65s cubic-bezier(.2,.8,.3,1) forwards;
       }
-      .cursor-ring.hover {
-        width: 46px; height: 46px;
-        border-color: rgba(204,255,0,.85);
+      @keyframes ripple-expand-2 {
+        to { width: 80px; height: 80px; opacity: 0; }
       }
     }
 
-    /* ── Sticky podcast header ── */
-    .podcast-header-wrap {
-      position: sticky;
-      top: 0;
-      background: rgba(13,13,13,.92);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      z-index: 10;
-      margin: -8px -24px 0;
-      padding: 16px 24px 12px;
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .screen { padding: 24px 16px 80px; }
+      .podcast-header-wrap { margin: 0 -16px; padding: 14px 16px; }
+      .hero-title { font-size: 32px; }
     }
 
-    /* ── Toast ── */
-    #toast {
-      position: fixed;
-      bottom: 32px;
-      left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: #ff4444;
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 500;
-      transition: transform .3s ease;
-      z-index: 999;
-      white-space: nowrap;
-      max-width: calc(100vw - 48px);
-      text-align: center;
-    }
-    #toast.show { transform: translateX(-50%) translateY(0); }
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-h); border-radius: 6px; }
+
+    /* ── SVG icons inline ── */
+    .icon { display: inline-flex; align-items: center; justify-content: center; }
   </style>
 </head>
 <body>
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
 <canvas id="cursor-trail"></canvas>
 <div class="cursor-dot" id="cursor-dot"></div>
 <div class="cursor-ring" id="cursor-ring"></div>
@@ -722,38 +1026,39 @@
 
   <!-- ════════ HOME ════════ -->
   <section id="screen-home" class="screen active">
-    <div class="logo">
-      <span class="logo-icon">🎙️</span>
-      PODAGENT
+    <div class="nav-bar">
+      <div class="logo">
+        <div class="logo-mark">🎙</div>
+        PodAgent
+      </div>
+      <button class="nav-link" id="btn-open-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:4px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        搜尋
+      </button>
     </div>
 
     <h1 class="hero-title">
-      丟 RSS，<br>
-      AI 幫你<span class="highlight">聽完</span>
+      丟連結，<br>AI 幫你<span class="accent">聽完</span>
     </h1>
     <p class="hero-sub">
-      貼上 Podcast RSS 連結<br>
-      AI 自動整理摘要與重點
+      貼上 Podcast RSS 或 YouTube 連結，<br>AI 自動整理摘要與重點。
     </p>
 
     <div class="input-group">
-      <div class="input-label">Podcast RSS URL</div>
+      <div class="input-label">輸入來源</div>
       <div class="input-row">
-        <span class="input-icon">📡</span>
-        <input id="rss-input" type="text"
-          placeholder="貼上 RSS URL 或 YouTube 影片網址..." />
+        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <input id="rss-input" type="text" placeholder="RSS URL 或 YouTube 網址..." />
       </div>
     </div>
 
     <div id="history-section" class="history-section" style="display:none">
-      <div class="history-label">最近搜尋</div>
+      <div class="section-title">最近搜尋</div>
       <div class="history-list" id="history-list"></div>
     </div>
 
-    <span class="search-all-link" id="btn-open-search">🔍 搜尋已分析的集數</span>
-
     <div class="api-row">
-      <label>API:</label>
+      <label>API</label>
       <input id="api-url" type="text" value="https://inspiring-amazement-production-d8bc.up.railway.app" />
     </div>
 
@@ -762,12 +1067,17 @@
 
   <!-- ════════ SEARCH ════════ -->
   <section id="screen-search" class="screen">
-    <button class="back-btn" id="back-from-search">←</button>
-    <div class="logo" style="margin-bottom:24px"><span>🔍</span> 跨集搜尋</div>
+    <button class="back-btn" id="back-from-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+      返回
+    </button>
 
-    <div class="input-group">
-      <div class="input-label">搜尋關鍵字</div>
+    <h1 class="hero-title" style="font-size:24px;margin-bottom:20px">跨集搜尋</h1>
+
+    <div class="input-group" style="margin-bottom:12px">
+      <div class="input-label">關鍵字</div>
       <div class="input-row">
+        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <input id="search-input" type="text" placeholder="輸入想找的主題或關鍵字..." />
       </div>
     </div>
@@ -776,40 +1086,50 @@
   </section>
 
   <!-- ════════ EPISODE LIST ════════ -->
-  <section id="screen-episodes" class="screen">
-    <button class="back-btn" id="back-from-episodes">←</button>
+  <section id="screen-episodes" class="screen" style="padding-top:0">
+    <div style="padding-top:32px">
+      <button class="back-btn" id="back-from-episodes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+        返回
+      </button>
+    </div>
 
     <div class="podcast-header-wrap">
       <div class="podcast-header">
         <div class="podcast-icon">🎙️</div>
-        <div>
+        <div class="podcast-meta">
           <div class="podcast-title" id="podcast-title">—</div>
-          <div class="episode-count">共 <span id="episode-count">0</span> 集 · 點選開始分析</div>
+          <div class="episode-count">共 <span id="episode-count">0</span> 集</div>
         </div>
       </div>
-      <div class="divider" style="margin:12px 0 0"></div>
     </div>
     <div class="episode-list" id="episode-list"></div>
   </section>
 
   <!-- ════════ PROCESSING ════════ -->
   <section id="screen-processing" class="screen">
-    <div class="proc-icon">
-      <lottie-player
-        src="https://assets2.lottiefiles.com/packages/lf20_qp1q7mct.json"
-        background="transparent"
-        speed="1"
-        style="width:160px;height:160px"
-        loop autoplay>
-      </lottie-player>
+    <div class="proc-header">
+      <div class="proc-anim">
+        <div class="pulse-rings">
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <div class="core"><span class="core-icon">🎙</span></div>
+        </div>
+      </div>
+      <div class="proc-title">AI 分析中</div>
+      <div class="proc-current-step" id="proc-current-step">初始化...</div>
     </div>
-    <div class="proc-title">AI 分析中</div>
-    <div class="proc-current-step" id="proc-current-step">初始化...</div>
 
-    <div class="progress-track">
-      <div class="progress-fill" id="progress-fill"></div>
+    <div class="progress-section">
+      <div class="progress-header">
+        <span class="progress-label">分析進度</span>
+        <span class="progress-pct" id="progress-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
     </div>
-    <div class="progress-pct" id="progress-pct">0%</div>
 
     <div class="step-checklist">
       <div class="step-row" id="srow-download">
@@ -819,7 +1139,7 @@
       <div class="step-row" id="srow-whisper">
         <div class="step-dot" id="sdot-whisper"></div>
         <span class="step-name" id="sname-whisper">語音轉文字</span>
-        <span id="whisper-skip-badge" style="display:none;font-size:10px;color:var(--muted);margin-left:auto;font-family:monospace;">已跳過</span>
+        <span id="whisper-skip-badge" class="whisper-skip" style="display:none">已跳過</span>
       </div>
       <div class="step-row" id="srow-ai">
         <div class="step-dot" id="sdot-ai"></div>
@@ -832,31 +1152,39 @@
 
   <!-- ════════ SUMMARY ════════ -->
   <section id="screen-summary" class="screen">
-    <div id="done-lottie">
-      <lottie-player
-        id="done-lottie-player"
-        src="https://assets2.lottiefiles.com/packages/lf20_jbrw3hcz.json"
-        background="transparent"
-        speed="1"
-        style="width:120px;height:120px">
-      </lottie-player>
+    <div id="done-anim">
+      <div class="done-circle" id="done-circle">
+        <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+        <div class="done-particles">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
     </div>
-    <div class="summary-header">
-      <button class="back-btn" id="back-from-summary" style="margin:0">←</button>
-      <h1>摘要重點</h1>
+    <div class="summary-nav">
+      <button class="back-btn" id="back-from-summary" style="margin:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <h1>分析結果</h1>
     </div>
 
-    <div class="section-label">摘要</div>
-    <div class="summary-box" id="summary-text">—</div>
+    <div class="content-section">
+      <div class="section-label">摘要</div>
+      <div class="summary-box" id="summary-text">—</div>
+    </div>
 
-    <div class="section-label">重點整理</div>
-    <div class="keypoints" id="keypoints-list"></div>
+    <div class="content-section">
+      <div class="section-label">重點整理</div>
+      <div class="keypoints" id="keypoints-list"></div>
+    </div>
 
-    <div class="section-label" style="margin-top:8px">問答</div>
-    <div class="chat-messages" id="chat-messages"></div>
-    <div class="chat-input-row">
-      <input id="chat-input" type="text" placeholder="問這集的任何問題..." />
-      <button class="chat-send-btn" id="chat-send">送出</button>
+    <div class="chat-section">
+      <div class="section-label">問答</div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input id="chat-input" type="text" placeholder="問這集的任何問題..." />
+        <button class="chat-send-btn" id="chat-send">送出</button>
+      </div>
     </div>
 
     <button class="btn-secondary" id="btn-analyze-another">分析另一集</button>
@@ -896,8 +1224,8 @@
 
   function saveToHistory(title, url) {
     let history = loadHistory();
-    history = history.filter(h => h.url !== url);          // 去重
-    history.unshift({ title, url });                        // 最新的放最前
+    history = history.filter(h => h.url !== url);
+    history.unshift({ title, url });
     if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     renderHistory();
@@ -919,14 +1247,18 @@
     list.innerHTML = '';
 
     history.forEach(({ title, url }) => {
+      const isYT = url.includes('youtube.com') || url.includes('youtu.be');
       const item = document.createElement('div');
       item.className = 'history-item';
       item.innerHTML = `
+        <div class="history-item-icon">${isYT ? '📺' : '🎙'}</div>
         <div class="history-item-info">
           <div class="history-item-title">${escHtml(title)}</div>
           <div class="history-item-url">${escHtml(url)}</div>
         </div>
-        <button class="history-delete" title="刪除">×</button>
+        <button class="history-delete" title="刪除">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
       `;
       item.querySelector('.history-item-info').addEventListener('click', () => {
         document.getElementById('rss-input').value = url;
@@ -942,7 +1274,7 @@
 
   renderHistory();
 
-  // ── YouTube URL 偵測 ──
+  // ── YouTube URL detection ──
   function isYouTubeUrl(url) {
     return /^https?:\/\/(www\.)?(youtube\.com\/watch|youtu\.be\/)/.test(url.trim());
   }
@@ -971,6 +1303,7 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     if (id === 'screen-episodes') updateAnalyzedBadges();
+    window.scrollTo(0, 0);
   }
 
   // ── Toast ──
@@ -1016,14 +1349,13 @@
 
     if (step === '下載字幕') {
       document.getElementById('sname-download').textContent = '下載字幕';
-      // 字幕模式：標記語音轉文字為已跳過
       document.getElementById('sname-whisper').textContent = '語音轉文字';
       document.getElementById('whisper-skip-badge').style.display = 'inline';
       const dot = document.getElementById('sdot-whisper');
       const row = document.getElementById('srow-whisper');
       dot.className = 'step-dot';
       dot.textContent = '—';
-      dot.style.color = 'var(--muted)';
+      dot.style.color = 'var(--text-3)';
       row.className = 'step-row';
     }
 
@@ -1067,14 +1399,13 @@
 
     try {
       if (isYouTubeChannelUrl(input)) {
-        // ── YouTube 頻道流程 ──
         const res = await fetch(`${API_BASE()}/youtube/channel?url=${encodeURIComponent(input)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
         saveToHistory(`📺 ${data.channel_title}`, input);
         document.getElementById('podcast-title').textContent = data.channel_title;
-        document.getElementById('episode-count').textContent = `共 ${data.videos.length} 支影片 · 點選開始分析`;
+        document.getElementById('episode-count').textContent = data.videos.length;
 
         const list = document.getElementById('episode-list');
         list.innerHTML = '';
@@ -1088,7 +1419,7 @@
               <div class="ep-date">${v.upload_date || '—'}${v.duration ? ' · ' + fmtDuration(v.duration) : ''}</div>
             </div>
             <span class="transcript-badge">YT</span>
-            <span class="ep-arrow">›</span>
+            <span class="ep-arrow">→</span>
           `;
           item.dataset.episodeUrl = v.url;
           item.addEventListener('click', () => analyzeEpisode(null, null, null, v.url, v.title, data.channel_title));
@@ -1098,14 +1429,13 @@
         showScreen('screen-episodes');
 
       } else if (isYouTubeUrl(input)) {
-        // ── YouTube 單支影片流程 ──
         const res = await fetch(`${API_BASE()}/youtube/info?url=${encodeURIComponent(input)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const info = await res.json();
 
         saveToHistory(`▶ ${info.title}`, input);
         document.getElementById('podcast-title').textContent = info.title;
-        document.getElementById('episode-count').textContent = `${info.uploader} · 點選開始分析`;
+        document.getElementById('episode-count').textContent = '1';
 
         const list = document.getElementById('episode-list');
         list.innerHTML = '';
@@ -1118,7 +1448,7 @@
             <div class="ep-date">${info.uploader}${info.duration ? ' · ' + fmtDuration(info.duration) : ''}</div>
           </div>
           <span class="transcript-badge">YT</span>
-          <span class="ep-arrow">›</span>
+          <span class="ep-arrow">→</span>
         `;
         item.dataset.episodeUrl = input;
         item.addEventListener('click', () => analyzeEpisode(null, null, null, input, info.title, info.uploader));
@@ -1127,7 +1457,6 @@
         showScreen('screen-episodes');
 
       } else {
-        // ── RSS 流程 ──
         const res = await fetch(`${API_BASE()}/podcast?rss_url=${encodeURIComponent(input)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -1137,7 +1466,7 @@
 
         saveToHistory(data.podcast_title, input);
         document.getElementById('podcast-title').textContent = data.podcast_title;
-        document.getElementById('episode-count').textContent = `共 ${data.episodes.length} 集 · 點選開始分析`;
+        document.getElementById('episode-count').textContent = data.episodes.length;
 
         const list = document.getElementById('episode-list');
         list.innerHTML = '';
@@ -1152,7 +1481,7 @@
               <div class="ep-date">${ep.publish_time || '—'}</div>
             </div>
             ${badge}
-            <span class="ep-arrow">›</span>
+            <span class="ep-arrow">→</span>
           `;
           item.dataset.episodeUrl = ep.mp3_url || '';
           item.addEventListener('click', () => analyzeEpisode(ep.mp3_url, ep.transcript_url, ep.transcript_type, null, ep.title, currentPodcastTitle));
@@ -1238,20 +1567,21 @@
 
   // ── Render Summary ──
   function renderSummary(data) {
-    const doneLottie = document.getElementById('done-lottie');
-    const donePlayer = document.getElementById('done-lottie-player');
+    const doneAnim = document.getElementById('done-anim');
+    const doneCircle = document.getElementById('done-circle');
 
-    // 先瞬間重置（不帶過渡），再下一幀觸發入場動畫
-    doneLottie.style.transition = 'none';
-    doneLottie.classList.remove('visible');
+    doneAnim.style.transition = 'none';
+    doneAnim.classList.remove('visible');
+
+    const freshCircle = doneCircle.cloneNode(true);
+    doneCircle.parentNode.replaceChild(freshCircle, doneCircle);
+
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      doneLottie.style.transition = '';
-      doneLottie.classList.add('visible');
-      donePlayer.seek(0);
-      donePlayer.play();
-      donePlayer.addEventListener('complete', () => {
-        doneLottie.classList.remove('visible'); // 觸發兩段式消失過渡
-      }, { once: true });
+      doneAnim.style.transition = '';
+      doneAnim.classList.add('visible');
+      setTimeout(() => {
+        doneAnim.classList.remove('visible');
+      }, 2200);
     }));
 
     document.getElementById('summary-text').textContent = data.answer || '（無摘要）';
@@ -1291,7 +1621,7 @@
 
     const loadingBubble = document.createElement('div');
     loadingBubble.className = 'chat-bubble ai loading';
-    loadingBubble.textContent = '思考中...';
+    loadingBubble.textContent = '思考中';
     messages.appendChild(loadingBubble);
     messages.scrollTop = messages.scrollHeight;
 
@@ -1375,23 +1705,24 @@
     if (e.key === 'Enter') document.getElementById('btn-get-episodes').click();
   });
 
-  // ── Mouse following: orbs + custom cursor + trail + ripple ──
+  // ── Mouse effects: orbs + cursor + trail + ripple ──
   (function () {
     const dot    = document.getElementById('cursor-dot');
     const ring   = document.getElementById('cursor-ring');
     const orb1   = document.querySelector('.orb-1');
     const orb2   = document.querySelector('.orb-2');
+    const orb3   = document.querySelector('.orb-3');
     const canvas = document.getElementById('cursor-trail');
     const ctx    = canvas ? canvas.getContext('2d') : null;
 
     let mx = window.innerWidth / 2, my = window.innerHeight / 2;
     let rx = mx, ry = my;
     let o1x = mx, o1y = my;
-    let o2x = mx * .7, o2y = my * .7;
+    let o2x = mx * .6, o2y = my * .6;
+    let o3x = mx * 1.2, o3y = my * .8;
 
-    // Trail points
-    const TRAIL = 22;
-    const pts = Array.from({length: TRAIL}, () => ({x: mx, y: my}));
+    const TRAIL = 28;
+    const pts = Array.from({ length: TRAIL }, () => ({ x: mx, y: my }));
 
     function resizeCanvas() {
       if (!canvas) return;
@@ -1404,62 +1735,75 @@
     document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
 
     document.addEventListener('mouseover', e => {
-      if (e.target.closest('button, a, .episode-item, .history-item, .search-result, input, .search-all-link')) {
+      const hit = e.target.closest('button, a, .episode-item, .history-item, .search-result, input, .nav-link');
+      if (hit) {
         ring.classList.add('hover');
+        dot.classList.add('hovering');
       } else {
         ring.classList.remove('hover');
+        dot.classList.remove('hovering');
       }
     });
 
-    // Click ripple
     document.addEventListener('mousedown', e => {
       dot.classList.add('clicking');
-      const r = document.createElement('div');
-      r.className = 'cursor-ripple';
-      r.style.left = e.clientX + 'px';
-      r.style.top  = e.clientY + 'px';
-      document.body.appendChild(r);
-      r.addEventListener('animationend', () => r.remove());
+      const r1 = document.createElement('div');
+      r1.className = 'cursor-ripple';
+      r1.style.left = e.clientX + 'px';
+      r1.style.top  = e.clientY + 'px';
+      document.body.appendChild(r1);
+      r1.addEventListener('animationend', () => r1.remove());
+
+      const r2 = document.createElement('div');
+      r2.className = 'cursor-ripple-2';
+      r2.style.left = e.clientX + 'px';
+      r2.style.top  = e.clientY + 'px';
+      document.body.appendChild(r2);
+      r2.addEventListener('animationend', () => r2.remove());
     });
     document.addEventListener('mouseup', () => dot.classList.remove('clicking'));
 
     function lerp(a, b, t) { return a + (b - a) * t; }
 
     function tick() {
-      // Cursor dot: immediate
       dot.style.left = mx + 'px';
       dot.style.top  = my + 'px';
 
-      // Cursor ring: lag
-      rx = lerp(rx, mx, .1);
-      ry = lerp(ry, my, .1);
+      rx = lerp(rx, mx, .12);
+      ry = lerp(ry, my, .12);
       ring.style.left = rx + 'px';
       ring.style.top  = ry + 'px';
 
-      // Orb 1: slow follow (accent)
-      o1x = lerp(o1x, mx, .035);
-      o1y = lerp(o1y, my, .035);
-      orb1.style.transform = `translate(${o1x - 210}px,${o1y - 210}px)`;
+      o1x = lerp(o1x, mx, .025);
+      o1y = lerp(o1y, my, .025);
+      orb1.style.transform = `translate(${o1x - 225}px,${o1y - 225}px)`;
 
-      // Orb 2: medium follow (purple), offset direction
-      o2x = lerp(o2x, window.innerWidth - mx, .055);
-      o2y = lerp(o2y, window.innerHeight - my, .055);
-      orb2.style.transform = `translate(${o2x - 140}px,${o2y - 140}px)`;
+      o2x = lerp(o2x, window.innerWidth - mx, .04);
+      o2y = lerp(o2y, window.innerHeight - my, .04);
+      orb2.style.transform = `translate(${o2x - 150}px,${o2y - 150}px)`;
 
-      // Trail
+      o3x = lerp(o3x, mx * .5 + window.innerWidth * .3, .018);
+      o3y = lerp(o3y, my * .8, .018);
+      orb3.style.transform = `translate(${o3x - 100}px,${o3y - 100}px)`;
+
       if (ctx) {
         pts.pop();
-        pts.unshift({x: mx, y: my});
+        pts.unshift({ x: mx, y: my });
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        pts.forEach((p, i) => {
+        for (let i = 1; i < TRAIL; i++) {
           const t = i / TRAIL;
-          const alpha = (1 - t) * .35;
-          const r = (1 - t) * 4;
+          const alpha = (1 - t) * .3;
+          const r = (1 - t) * 3;
+          const p = pts[i];
+          const pp = pts[i - 1];
           ctx.beginPath();
-          ctx.arc(p.x, p.y, Math.max(r, .5), 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(204,255,0,${alpha})`;
-          ctx.fill();
-        });
+          ctx.moveTo(pp.x, pp.y);
+          ctx.lineTo(p.x, p.y);
+          ctx.strokeStyle = `rgba(163,230,53,${alpha})`;
+          ctx.lineWidth = Math.max(r, .3);
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
       }
 
       requestAnimationFrame(tick);
