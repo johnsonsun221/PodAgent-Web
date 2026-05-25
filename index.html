@@ -480,6 +480,88 @@
     }
     .btn-secondary:hover { background: var(--accent-dim); }
 
+    /* ── Chat ── */
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+    .chat-bubble {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #000;
+      font-weight: 500;
+    }
+    .chat-bubble.ai {
+      align-self: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: #ddd;
+    }
+    .chat-bubble.loading { color: var(--muted); font-style: italic; }
+    .chat-input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+    .chat-input-row input {
+      flex: 1;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .chat-input-row input:focus { outline: none; border-color: var(--accent); }
+    .chat-send-btn {
+      padding: 12px 20px;
+      background: var(--accent);
+      color: #000;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .chat-send-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Search screen ── */
+    .search-result {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .search-result-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .search-result-podcast { font-size: 12px; color: var(--accent); margin-bottom: 8px; }
+    .search-result-excerpt { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .no-results { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
+
+    /* ── Search link on home ── */
+    .search-all-link {
+      display: block;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: 16px;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .search-all-link:hover { color: var(--text); }
+
     /* ── Toast ── */
     #toast {
       position: fixed;
@@ -534,12 +616,29 @@
       <div class="history-list" id="history-list"></div>
     </div>
 
+    <span class="search-all-link" id="btn-open-search">🔍 搜尋已分析的集數</span>
+
     <div class="api-row">
       <label>API:</label>
       <input id="api-url" type="text" value="https://inspiring-amazement-production-d8bc.up.railway.app" />
     </div>
 
     <button class="btn-primary" id="btn-get-episodes">取得節目列表</button>
+  </section>
+
+  <!-- ════════ SEARCH ════════ -->
+  <section id="screen-search" class="screen">
+    <button class="back-btn" id="back-from-search">←</button>
+    <div class="logo" style="margin-bottom:24px"><span>🔍</span> 跨集搜尋</div>
+
+    <div class="input-group">
+      <div class="input-label">搜尋關鍵字</div>
+      <div class="input-row">
+        <input id="search-input" type="text" placeholder="輸入想找的主題或關鍵字..." />
+      </div>
+    </div>
+    <button class="btn-primary" id="btn-search-exec" style="margin-bottom:24px">搜尋</button>
+    <div id="search-results"></div>
   </section>
 
   <!-- ════════ EPISODE LIST ════════ -->
@@ -600,6 +699,13 @@
 
     <div class="section-label">重點整理</div>
     <div class="keypoints" id="keypoints-list"></div>
+
+    <div class="section-label" style="margin-top:8px">問答</div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-row">
+      <input id="chat-input" type="text" placeholder="問這集的任何問題..." />
+      <button class="chat-send-btn" id="chat-send">送出</button>
+    </div>
 
     <button class="btn-secondary" id="btn-analyze-another">分析另一集</button>
   </section>
@@ -760,6 +866,7 @@
   let currentEpisodes = [];
   let currentPodcastTitle = '';
   let activeSource = null;
+  let currentEpisodeUrl = '';
 
   // ── Get Episodes ──
   document.getElementById('btn-get-episodes').addEventListener('click', async () => {
@@ -794,7 +901,7 @@
           <span class="transcript-badge">YT</span>
           <span class="ep-arrow">›</span>
         `;
-        item.addEventListener('click', () => analyzeEpisode(null, null, null, input));
+        item.addEventListener('click', () => analyzeEpisode(null, null, null, input, info.title, info.uploader));
         list.appendChild(item);
         showScreen('screen-episodes');
 
@@ -826,7 +933,7 @@
             ${badge}
             <span class="ep-arrow">›</span>
           `;
-          item.addEventListener('click', () => analyzeEpisode(ep.mp3_url, ep.transcript_url, ep.transcript_type, null));
+          item.addEventListener('click', () => analyzeEpisode(ep.mp3_url, ep.transcript_url, ep.transcript_type, null, ep.title, currentPodcastTitle));
           list.appendChild(item);
         });
         showScreen('screen-episodes');
@@ -845,10 +952,13 @@
   }
 
   // ── Analyze Episode via SSE ──
-  function analyzeEpisode(mp3Url, transcriptUrl, transcriptType, youtubeUrl) {
+  function analyzeEpisode(mp3Url, transcriptUrl, transcriptType, youtubeUrl, episodeTitle, podcastTitle) {
     if (activeSource) { activeSource.close(); activeSource = null; }
     resetProgress();
     showScreen('screen-processing');
+
+    currentEpisodeUrl = youtubeUrl || mp3Url || '';
+    document.getElementById('chat-messages').innerHTML = '';
 
     let url;
     if (youtubeUrl) {
@@ -860,6 +970,8 @@
         if (transcriptType) url += `&transcript_type=${encodeURIComponent(transcriptType)}`;
       }
     }
+    if (episodeTitle) url += `&episode_title=${encodeURIComponent(episodeTitle)}`;
+    if (podcastTitle) url += `&podcast_title=${encodeURIComponent(podcastTitle)}`;
     const es = new EventSource(url);
     activeSource = es;
     let completed = false;
@@ -914,6 +1026,96 @@
   document.getElementById('btn-cancel-analysis').addEventListener('click', () => {
     if (activeSource) { activeSource.close(); activeSource = null; }
     showScreen('screen-episodes');
+  });
+
+  // ── Chat ──
+  async function sendChat() {
+    const input = document.getElementById('chat-input');
+    const question = input.value.trim();
+    if (!question || !currentEpisodeUrl) return;
+
+    const messages = document.getElementById('chat-messages');
+    const sendBtn = document.getElementById('chat-send');
+
+    const userBubble = document.createElement('div');
+    userBubble.className = 'chat-bubble user';
+    userBubble.textContent = question;
+    messages.appendChild(userBubble);
+
+    const loadingBubble = document.createElement('div');
+    loadingBubble.className = 'chat-bubble ai loading';
+    loadingBubble.textContent = '思考中...';
+    messages.appendChild(loadingBubble);
+    messages.scrollTop = messages.scrollHeight;
+
+    input.value = '';
+    sendBtn.disabled = true;
+
+    try {
+      const res = await fetch(`${API_BASE()}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, episode_url: currentEpisodeUrl }),
+      });
+      const data = await res.json();
+      loadingBubble.className = 'chat-bubble ai';
+      loadingBubble.textContent = data.answer;
+    } catch (e) {
+      loadingBubble.className = 'chat-bubble ai';
+      loadingBubble.textContent = '發生錯誤，請稍後再試。';
+    } finally {
+      sendBtn.disabled = false;
+      messages.scrollTop = messages.scrollHeight;
+    }
+  }
+
+  document.getElementById('chat-send').addEventListener('click', sendChat);
+  document.getElementById('chat-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendChat();
+  });
+
+  // ── Search ──
+  document.getElementById('btn-open-search').addEventListener('click', () => showScreen('screen-search'));
+  document.getElementById('back-from-search').addEventListener('click', () => showScreen('screen-home'));
+
+  document.getElementById('btn-search-exec').addEventListener('click', async () => {
+    const query = document.getElementById('search-input').value.trim();
+    if (!query) return;
+
+    const btn = document.getElementById('btn-search-exec');
+    const container = document.getElementById('search-results');
+    btn.disabled = true;
+    btn.textContent = '搜尋中...';
+    container.innerHTML = '';
+
+    try {
+      const res = await fetch(`${API_BASE()}/search?query=${encodeURIComponent(query)}`);
+      const results = await res.json();
+
+      if (!results.length) {
+        container.innerHTML = '<div class="no-results">沒有找到相關集數，試著分析幾集後再搜尋。</div>';
+        return;
+      }
+      results.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'search-result';
+        card.innerHTML = `
+          <div class="search-result-title">${escHtml(r.episode_title)}</div>
+          ${r.podcast_title ? `<div class="search-result-podcast">${escHtml(r.podcast_title)}</div>` : ''}
+          <div class="search-result-excerpt">${escHtml(r.excerpt)}…</div>
+        `;
+        container.appendChild(card);
+      });
+    } catch (e) {
+      container.innerHTML = '<div class="no-results">搜尋失敗，請確認後端連線正常。</div>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '搜尋';
+    }
+  });
+
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-search-exec').click();
   });
 
   // ── Navigation ──
